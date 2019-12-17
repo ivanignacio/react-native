@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
  * This source code is licensed under the MIT license found in the
@@ -8,6 +8,7 @@
 #include "YogaLayoutableShadowNode.h"
 
 #include <algorithm>
+#include <limits>
 #include <memory>
 
 #include <react/components/view/conversions.h>
@@ -20,22 +21,21 @@
 namespace facebook {
 namespace react {
 
-YogaLayoutableShadowNode::YogaLayoutableShadowNode()
-    : yogaNode_({}), yogaConfig_(nullptr) {
-  initializeYogaConfig(yogaConfig_);
-
-  yogaNode_.setConfig(&yogaConfig_);
+YogaLayoutableShadowNode::YogaLayoutableShadowNode(bool isLeaf)
+    : yogaConfig_(nullptr),
+      yogaNode_(&initializeYogaConfig(yogaConfig_)),
+      isLeaf_(isLeaf) {
   yogaNode_.setContext(this);
 }
 
 YogaLayoutableShadowNode::YogaLayoutableShadowNode(
-    const YogaLayoutableShadowNode &layoutableShadowNode)
+    YogaLayoutableShadowNode const &layoutableShadowNode)
     : LayoutableShadowNode(layoutableShadowNode),
-      yogaNode_(layoutableShadowNode.yogaNode_),
-      yogaConfig_(nullptr) {
-  initializeYogaConfig(yogaConfig_);
-
-  yogaNode_.setConfig(&yogaConfig_);
+      yogaConfig_(nullptr),
+      yogaNode_(
+          layoutableShadowNode.yogaNode_,
+          &initializeYogaConfig(yogaConfig_)),
+      isLeaf_(layoutableShadowNode.isLeaf_) {
   yogaNode_.setContext(this);
   yogaNode_.setOwner(nullptr);
 
@@ -73,6 +73,10 @@ void YogaLayoutableShadowNode::enableMeasurement() {
 }
 
 void YogaLayoutableShadowNode::appendChild(YogaLayoutableShadowNode *child) {
+  if (isLeaf_) {
+    return;
+  }
+
   ensureUnsealed();
 
   yogaNode_.setDirty(true);
@@ -98,6 +102,10 @@ void YogaLayoutableShadowNode::appendChild(YogaLayoutableShadowNode *child) {
 
 void YogaLayoutableShadowNode::setChildren(
     YogaLayoutableShadowNode::UnsharedList children) {
+  if (isLeaf_) {
+    return;
+  }
+
   ensureUnsealed();
 
   // Optimization:
@@ -135,8 +143,20 @@ void YogaLayoutableShadowNode::setSize(Size size) const {
   ensureUnsealed();
 
   auto style = yogaNode_.getStyle();
-  style.dimensions[YGDimensionWidth] = yogaStyleValueFromFloat(size.width);
-  style.dimensions[YGDimensionHeight] = yogaStyleValueFromFloat(size.height);
+  style.dimensions()[YGDimensionWidth] = yogaStyleValueFromFloat(size.width);
+  style.dimensions()[YGDimensionHeight] = yogaStyleValueFromFloat(size.height);
+  yogaNode_.setStyle(style);
+  yogaNode_.setDirty(true);
+}
+
+void YogaLayoutableShadowNode::setPadding(RectangleEdges<Float> padding) const {
+  ensureUnsealed();
+
+  auto style = yogaNode_.getStyle();
+  style.padding()[YGEdgeTop] = yogaStyleValueFromFloat(padding.top);
+  style.padding()[YGEdgeLeft] = yogaStyleValueFromFloat(padding.left);
+  style.padding()[YGEdgeRight] = yogaStyleValueFromFloat(padding.right);
+  style.padding()[YGEdgeBottom] = yogaStyleValueFromFloat(padding.bottom);
   yogaNode_.setStyle(style);
   yogaNode_.setDirty(true);
 }
@@ -146,7 +166,7 @@ void YogaLayoutableShadowNode::setPositionType(
   ensureUnsealed();
 
   auto style = yogaNode_.getStyle();
-  style.positionType = positionType;
+  style.positionType() = positionType;
   yogaNode_.setStyle(style);
   yogaNode_.setDirty(true);
 }
@@ -198,7 +218,11 @@ void YogaLayoutableShadowNode::layoutChildren(LayoutContext layoutContext) {
     assert(childYogaNode->getOwner() == &yogaNode_);
 
     childNode->ensureUnsealed();
-    childNode->setLayoutMetrics(childLayoutMetrics);
+    auto affected = childNode->setLayoutMetrics(childLayoutMetrics);
+
+    if (affected && layoutContext.affectedNodes) {
+      layoutContext.affectedNodes->push_back(childNode);
+    }
   }
 }
 
@@ -224,7 +248,7 @@ YGNode *YogaLayoutableShadowNode::yogaNodeCloneCallbackConnector(
     int childIndex) {
   SystraceSection s("YogaLayoutableShadowNode::yogaNodeCloneCallbackConnector");
 
-  // At this point it is garanteed that all shadow nodes associated with yoga
+  // At this point it is guaranteed that all shadow nodes associated with yoga
   // nodes are `YogaLayoutableShadowNode` subclasses.
   auto parentNode =
       static_cast<YogaLayoutableShadowNode *>(parentYogaNode->getContext());
@@ -248,7 +272,8 @@ YGSize YogaLayoutableShadowNode::yogaNodeMeasureCallbackConnector(
       static_cast<YogaLayoutableShadowNode *>(yogaNode->getContext());
 
   auto minimumSize = Size{0, 0};
-  auto maximumSize = Size{kFloatMax, kFloatMax};
+  auto maximumSize = Size{std::numeric_limits<Float>::infinity(),
+                          std::numeric_limits<Float>::infinity()};
 
   switch (widthMode) {
     case YGMeasureModeUndefined:
@@ -280,9 +305,11 @@ YGSize YogaLayoutableShadowNode::yogaNodeMeasureCallbackConnector(
                 yogaFloatFromFloat(size.height)};
 }
 
-void YogaLayoutableShadowNode::initializeYogaConfig(YGConfig &config) {
+YGConfig &YogaLayoutableShadowNode::initializeYogaConfig(YGConfig &config) {
   config.setCloneNodeCallback(
       YogaLayoutableShadowNode::yogaNodeCloneCallbackConnector);
+  config.useLegacyStretchBehaviour = true;
+  return config;
 }
 
 } // namespace react

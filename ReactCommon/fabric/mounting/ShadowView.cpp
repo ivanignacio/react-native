@@ -1,7 +1,9 @@
-// Copyright (c) Facebook, Inc. and its affiliates.
-
-// This source code is licensed under the MIT license found in the
-// LICENSE file in the root directory of this source tree.
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
 
 #include "ShadowView.h"
 
@@ -49,6 +51,27 @@ bool ShadowView::operator==(const ShadowView &rhs) const {
 bool ShadowView::operator!=(const ShadowView &rhs) const {
   return !(*this == rhs);
 }
+
+#if RN_DEBUG_STRING_CONVERTIBLE
+
+std::string getDebugName(ShadowView const &object) {
+  return object.componentHandle == 0 ? "Invalid" : object.componentName;
+}
+
+std::vector<DebugStringConvertibleObject> getDebugProps(
+    ShadowView const &object,
+    DebugStringConvertibleOptions options) {
+  return {
+      {"tag", getDebugDescription(object.tag, options)},
+      {"props", getDebugDescription(object.props, options)},
+      {"eventEmitter", getDebugDescription(object.eventEmitter, options)},
+      {"layoutMetrics", getDebugDescription(object.layoutMetrics, options)},
+      {"localData", getDebugDescription(object.localData, options)},
+      {"state", getDebugDescription(object.state, options)},
+  };
+}
+
+#endif
 
 bool ShadowViewNodePair::operator==(const ShadowViewNodePair &rhs) const {
   return this->shadowNode == rhs.shadowNode;

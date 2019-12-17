@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
  * This source code is licensed under the MIT license found in the
@@ -8,9 +8,10 @@
 #import "RCTImageManager.h"
 
 #import <react/debug/SystraceSection.h>
+#import <react/utils/ManagedObjectWrapper.h>
 #import <react/utils/SharedFunction.h>
 
-#import <React/RCTImageLoader.h>
+#import <React/RCTImageLoaderWithAttributionProtocol.h>
 #import <react/imagemanager/ImageResponse.h>
 #import <react/imagemanager/ImageResponseObserver.h>
 
@@ -19,18 +20,22 @@
 using namespace facebook::react;
 
 @implementation RCTImageManager {
-  RCTImageLoader *_imageLoader;
+  id<RCTImageLoaderWithAttributionProtocol> _imageLoader;
+  dispatch_queue_t _backgroundSerialQueue;
 }
 
-- (instancetype)initWithImageLoader:(RCTImageLoader *)imageLoader {
+- (instancetype)initWithImageLoader:(id<RCTImageLoaderWithAttributionProtocol>)imageLoader
+{
   if (self = [super init]) {
     _imageLoader = imageLoader;
+    _backgroundSerialQueue =
+        dispatch_queue_create("com.facebook.react-native.image-manager-queue", DISPATCH_QUEUE_SERIAL);
   }
 
   return self;
 }
 
-- (ImageRequest)requestImage:(ImageSource)imageSource
+- (ImageRequest)requestImage:(ImageSource)imageSource surfaceId:(SurfaceId)surfaceId
 {
   SystraceSection s("RCTImageManager::requestImage");
 
@@ -46,8 +51,12 @@ using namespace facebook::react;
    * work (such as creating an `NSURLRequest` object and some obscure logic inside `RCTImageLoader`) can take a couple
    * of milliseconds, so we have to offload this to a separate thread. `ImageRequest` can be created as part of the
    * layout process, so it must be highly performant.
+   *
+   * Technically, we don't need to dispatch this to *serial* queue. The interface of `RCTImageLoader` promises to be
+   * fully thread-safe. However, in reality, it crashes when we request images on concurrently on different threads. See
+   * T46024425 for more details.
    */
-  dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+  dispatch_async(_backgroundSerialQueue, ^{
     NSURLRequest *request = NSURLRequestFromImageSource(imageSource);
 
     auto completionBlock = ^(NSError *error, UIImage *image) {
@@ -57,8 +66,7 @@ using namespace facebook::react;
       }
 
       if (image && !error) {
-        auto imageResponse = ImageResponse(std::shared_ptr<void>((__bridge_retained void *)image, CFRelease));
-        observerCoordinator->nativeImageResponseComplete(std::move(imageResponse));
+        observerCoordinator->nativeImageResponseComplete(ImageResponse(wrapManagedObject(image)));
       } else {
         observerCoordinator->nativeImageResponseFailed();
       }
@@ -79,6 +87,9 @@ using namespace facebook::react;
                                               scale:imageSource.scale
                                             clipped:YES
                                          resizeMode:RCTResizeModeStretch
+                                        attribution:{
+                                                        .surfaceId = surfaceId,
+                                                    }
                                       progressBlock:progressBlock
                                    partialLoadBlock:nil
                                     completionBlock:completionBlock];

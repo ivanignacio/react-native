@@ -1,7 +1,9 @@
-// Copyright (c) Facebook, Inc. and its affiliates.
-
-// This source code is licensed under the MIT license found in the
-// LICENSE file in the root directory of this source tree.
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
 
 #pragma once
 
@@ -22,34 +24,46 @@ namespace react {
  */
 struct ShadowView final {
   ShadowView() = default;
-  ShadowView(const ShadowView &shadowView) = default;
-
-  ~ShadowView(){};
+  ShadowView(ShadowView const &shadowView) = default;
+  ShadowView(ShadowView &&shadowView) noexcept = default;
 
   /*
    * Constructs a `ShadowView` from given `ShadowNode`.
    */
-  explicit ShadowView(const ShadowNode &shadowNode);
+  explicit ShadowView(ShadowNode const &shadowNode);
 
-  ShadowView &operator=(const ShadowView &other) = default;
+  ShadowView &operator=(ShadowView const &other) = default;
+  ShadowView &operator=(ShadowView &&other) = default;
 
-  bool operator==(const ShadowView &rhs) const;
-  bool operator!=(const ShadowView &rhs) const;
+  bool operator==(ShadowView const &rhs) const;
+  bool operator!=(ShadowView const &rhs) const;
 
-  ComponentName componentName = "";
-  ComponentHandle componentHandle = 0;
-  Tag tag = -1; // Tag does not change during the lifetime of a shadow view.
-  SharedProps props = {};
-  SharedEventEmitter eventEmitter = {};
-  LayoutMetrics layoutMetrics = EmptyLayoutMetrics;
-  SharedLocalData localData = {};
-  State::Shared state = {};
+  ComponentName componentName{};
+  ComponentHandle componentHandle{};
+  Tag tag{};
+  Props::Shared props{};
+  EventEmitter::Shared eventEmitter{};
+  LayoutMetrics layoutMetrics{EmptyLayoutMetrics};
+  LocalData::Shared localData{};
+  State::Shared state{};
 };
+
+#if RN_DEBUG_STRING_CONVERTIBLE
+
+std::string getDebugName(ShadowView const &object);
+std::vector<DebugStringConvertibleObject> getDebugProps(
+    ShadowView const &object,
+    DebugStringConvertibleOptions options);
+
+#endif
 
 /*
  * Describes pair of a `ShadowView` and a `ShadowNode`.
  */
 struct ShadowViewNodePair final {
+  using List = better::
+      small_vector<ShadowViewNodePair, kShadowNodeChildrenSmallVectorSize>;
+
   ShadowView shadowView;
   ShadowNode const *shadowNode;
 
@@ -59,9 +73,6 @@ struct ShadowViewNodePair final {
   bool operator==(const ShadowViewNodePair &rhs) const;
   bool operator!=(const ShadowViewNodePair &rhs) const;
 };
-
-using ShadowViewNodePairList = better::
-    small_vector<ShadowViewNodePair, kShadowNodeChildrenSmallVectorSize>;
 
 } // namespace react
 } // namespace facebook

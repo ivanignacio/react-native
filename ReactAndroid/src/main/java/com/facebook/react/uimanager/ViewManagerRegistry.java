@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
  * This source code is licensed under the MIT license found in the
@@ -7,10 +7,10 @@
 
 package com.facebook.react.uimanager;
 
+import androidx.annotation.Nullable;
 import com.facebook.react.common.MapBuilder;
 import java.util.List;
 import java.util.Map;
-import javax.annotation.Nullable;
 
 /**
  * Class that stores the mapping between native view name used in JS and the corresponding instance
@@ -53,7 +53,8 @@ public final class ViewManagerRegistry {
         mViewManagers.put(className, viewManager);
         return viewManager;
       }
+      throw new IllegalViewOperationException("ViewManagerResolver returned null for " + className);
     }
-    throw new IllegalViewOperationException("No ViewManager defined for class " + className);
+    throw new IllegalViewOperationException("No ViewManager found for class " + className);
   }
 }

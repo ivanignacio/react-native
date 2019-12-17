@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
  * This source code is licensed under the MIT license found in the
@@ -72,6 +72,17 @@ RCT_EXTERN_C_END
 RCT_EXTERN void RCTRegisterModule(Class); \
 + (NSString *)moduleName { return @#js_name; } \
 + (void)load { RCTRegisterModule(self); }
+
+/**
+ * Same as RCT_EXPORT_MODULE, but uses __attribute__((constructor)) for module
+ * registration. Useful for registering swift classes that forbids use of load
+ * Used in RCT_EXTERN_REMAP_MODULE
+ */
+#define RCT_EXPORT_MODULE_NO_LOAD(js_name, objc_name) \
+RCT_EXTERN void RCTRegisterModule(Class); \
++ (NSString *)moduleName { return @#js_name; } \
+__attribute__((constructor)) static void \
+RCT_CONCAT(initialize_, objc_name)() { RCTRegisterModule([objc_name class]); }
 
 /**
  * To improve startup performance users may want to generate their module lists
@@ -250,7 +261,7 @@ RCT_EXTERN void RCTRegisterModule(Class); \
   @interface objc_name (RCTExternModule) <RCTBridgeModule> \
   @end \
   @implementation objc_name (RCTExternModule) \
-  RCT_EXPORT_MODULE(js_name)
+  RCT_EXPORT_MODULE_NO_LOAD(js_name, objc_name)
 
 /**
  * Use this macro in accordance with RCT_EXTERN_MODULE to export methods
@@ -280,7 +291,7 @@ RCT_EXTERN void RCTRegisterModule(Class); \
  * Most modules can be used from any thread. All of the modules exported non-sync method will be called on its
  * methodQueue, and the module will be constructed lazily when its first invoked. Some modules have main need to access
  * information that's main queue only (e.g. most UIKit classes). Since we don't want to dispatch synchronously to the
- * main thread to this safely, we construct these moduels and export their constants ahead-of-time.
+ * main thread to this safely, we construct these modules and export their constants ahead-of-time.
  *
  * Note that when set to false, the module constructor will be called from any thread.
  *

@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
  * This source code is licensed under the MIT license found in the
@@ -83,7 +83,9 @@ RCT_EXPORT_VIEW_PROPERTY(scrollEventThrottle, NSTimeInterval)
 RCT_EXPORT_VIEW_PROPERTY(zoomScale, CGFloat)
 RCT_EXPORT_VIEW_PROPERTY(contentInset, UIEdgeInsets)
 RCT_EXPORT_VIEW_PROPERTY(scrollIndicatorInsets, UIEdgeInsets)
+RCT_EXPORT_VIEW_PROPERTY(scrollToOverflowEnabled, BOOL)
 RCT_EXPORT_VIEW_PROPERTY(snapToInterval, int)
+RCT_EXPORT_VIEW_PROPERTY(disableIntervalMomentum, BOOL)
 RCT_EXPORT_VIEW_PROPERTY(snapToOffsets, NSArray<NSNumber *>)
 RCT_EXPORT_VIEW_PROPERTY(snapToStart, BOOL)
 RCT_EXPORT_VIEW_PROPERTY(snapToEnd, BOOL)

@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
  * This source code is licensed under the MIT license found in the
@@ -21,25 +21,15 @@ class SliderComponentDescriptor final
     : public ConcreteComponentDescriptor<SliderShadowNode> {
  public:
   SliderComponentDescriptor(
-      EventDispatcher::Shared eventDispatcher,
-      const SharedContextContainer &contextContainer)
-      : ConcreteComponentDescriptor(eventDispatcher),
-  // TODO (39486757): implement image manager on Android, currently Android does
-  // not have an ImageManager so this will crash
-#ifndef ANDROID
-        imageManager_(
-            contextContainer
-                ? contextContainer->getInstance<SharedImageManager>(
-                      "ImageManager")
-                : nullptr),
-#else
-        imageManager_(nullptr),
-#endif
+      EventDispatcher::Weak eventDispatcher,
+      ContextContainer::Shared const &contextContainer,
+      ComponentDescriptor::Flavor const &flavor = {})
+      : ConcreteComponentDescriptor(eventDispatcher, contextContainer, flavor),
+        imageManager_(std::make_shared<ImageManager>(contextContainer)),
         measurementsManager_(
             SliderMeasurementsManager::shouldMeasureSlider()
                 ? std::make_shared<SliderMeasurementsManager>(contextContainer)
-                : nullptr) {
-  }
+                : nullptr) {}
 
   void adopt(UnsharedShadowNode shadowNode) const override {
     ConcreteComponentDescriptor::adopt(shadowNode);

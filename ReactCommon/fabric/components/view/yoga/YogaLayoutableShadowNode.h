@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
  * This source code is licensed under the MIT license found in the
@@ -32,10 +32,10 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode,
 
 #pragma mark - Constructors
 
-  YogaLayoutableShadowNode();
+  YogaLayoutableShadowNode(bool isLeaf);
 
   YogaLayoutableShadowNode(
-      const YogaLayoutableShadowNode &layoutableShadowNode);
+      YogaLayoutableShadowNode const &layoutableShadowNode);
 
 #pragma mark - Mutating Methods
 
@@ -64,12 +64,14 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode,
    */
   void setProps(const YogaStylableProps &props);
 
-  /**
+  /*
    * Sets layoutable size of node.
    */
   void setSize(Size size) const;
 
-  /**
+  void setPadding(RectangleEdges<Float> padding) const;
+
+  /*
    * Sets position type of Yoga node (relative, absolute).
    */
   void setPositionType(YGPositionType positionType) const;
@@ -95,6 +97,11 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode,
 
  protected:
   /*
+   * Yoga config associated (only) with this particular node.
+   */
+  YGConfig yogaConfig_;
+
+  /*
    * All Yoga functions only accept non-const arguments, so we have to mark
    * Yoga node as `mutable` here to avoid `static_cast`ing the pointer to this
    * all the time.
@@ -102,12 +109,14 @@ class YogaLayoutableShadowNode : public LayoutableShadowNode,
   mutable YGNode yogaNode_;
 
   /*
-   * Yoga config associated (only) with this particular node.
+   * Forces associated YGNode to be a leaf.
+   * Adding a child `ShadowNode` will not add `YGNode` associated with it as a
+   * child to the stored `YGNode`.
    */
-  YGConfig yogaConfig_;
+  bool const isLeaf_;
 
  private:
-  static void initializeYogaConfig(YGConfig &config);
+  static YGConfig &initializeYogaConfig(YGConfig &config);
   static YGNode *yogaNodeCloneCallbackConnector(
       YGNode *oldYogaNode,
       YGNode *parentYogaNode,

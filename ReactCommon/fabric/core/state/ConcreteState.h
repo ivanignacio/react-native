@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
  * This source code is licensed under the MIT license found in the
@@ -27,11 +27,15 @@ class ConcreteState : public State {
   using Shared = std::shared_ptr<const ConcreteState>;
   using Data = DataT;
 
-  ConcreteState(Data &&data, StateCoordinator::Shared stateCoordinator)
-      : State(std::move(stateCoordinator)), data_(std::move(data)) {}
+  explicit ConcreteState(
+      Data &&data,
+      StateCoordinator::Shared const &stateCoordinator)
+      : State(stateCoordinator), data_(std::move(data)) {}
 
-  ConcreteState(Data &&data, const ConcreteState &other)
-      : State(other.stateCoordinator_), data_(std::move(data)) {}
+  explicit ConcreteState(Data &&data, State const &other)
+      : State(other), data_(std::move(data)) {}
+
+  virtual ~ConcreteState() = default;
 
   /*
    * Returns stored data.
@@ -48,11 +52,12 @@ class ConcreteState : public State {
    */
   void updateState(
       Data &&newData,
-      EventPriority priority = EventPriority::SynchronousUnbatched) const {
+      EventPriority priority = EventPriority::AsynchronousUnbatched) const {
     updateState(
         [data = std::move(newData)](const Data &oldData) mutable -> Data && {
           return std::move(data);
-        });
+        },
+        priority);
   }
 
   /*
@@ -64,7 +69,7 @@ class ConcreteState : public State {
    * of conflict.
    */
   void updateState(
-      std::function<Data && (const Data &oldData)> callback,
+      std::function<Data(const Data &oldData)> callback,
       EventPriority priority = EventPriority::AsynchronousBatched) const {
     stateCoordinator_->dispatchRawState(
         {[stateCoordinator = stateCoordinator_,
@@ -79,6 +84,16 @@ class ConcreteState : public State {
         }},
         priority);
   }
+
+#ifdef ANDROID
+  folly::dynamic getDynamic() const override {
+    return data_.getDynamic();
+  }
+
+  void updateState(folly::dynamic data) const override {
+    updateState(std::move(Data(data_, data)));
+  }
+#endif
 
  private:
   DataT data_;

@@ -1,7 +1,9 @@
-// Copyright (c) Facebook, Inc. and its affiliates.
-
-// This source code is licensed under the MIT license found in the
-// LICENSE file in the root directory of this source tree.
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
 
 #include "MethodInvoker.h"
 
@@ -221,6 +223,9 @@ MethodCallResult MethodInvoker::invoke(std::weak_ptr<Instance>& instance, alias_
 #define OBJECT_CASE(JNI_CLASS, ACTIONS) {                                 \
   auto jobject = env->CallObjectMethodA(module.get(), method_, args);     \
   throwPendingJniExceptionAsCppException();                               \
+  if (!jobject) {                                                         \
+    return folly::dynamic(nullptr);                                       \
+  }                                                                       \
   auto result = adopt_local(static_cast<JNI_CLASS::javaobject>(jobject)); \
   return folly::dynamic(result->ACTIONS());                               \
 }
@@ -228,6 +233,9 @@ MethodCallResult MethodInvoker::invoke(std::weak_ptr<Instance>& instance, alias_
 #define OBJECT_CASE_CASTING(JNI_CLASS, ACTIONS, RESULT_TYPE) {            \
   auto jobject = env->CallObjectMethodA(module.get(), method_, args);     \
   throwPendingJniExceptionAsCppException();                               \
+  if (!jobject) {                                                         \
+    return folly::dynamic(nullptr);                                       \
+  }                                                                       \
   auto result = adopt_local(static_cast<JNI_CLASS::javaobject>(jobject)); \
   return folly::dynamic(static_cast<RESULT_TYPE>(result->ACTIONS()));     \
 }

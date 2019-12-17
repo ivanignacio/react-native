@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
  * This source code is licensed under the MIT license found in the
@@ -10,7 +10,6 @@
 #import <UIKit/UIKit.h>
 
 #import "RCTConvert.h"
-#import "RCTEventDispatcher.h"
 #import "RCTLog.h"
 #import "RCTUIManager.h"
 #import "RCTUIManagerObserverCoordinator.h"
@@ -18,133 +17,11 @@
 #import "RCTUtils.h"
 #import "UIView+Private.h"
 #import "UIView+React.h"
+#import "RCTScrollEvent.h"
 
 #if !TARGET_OS_TV
 #import "RCTRefreshControl.h"
 #endif
-
-@interface RCTScrollEvent : NSObject <RCTEvent>
-
-- (instancetype)initWithEventName:(NSString *)eventName
-                         reactTag:(NSNumber *)reactTag
-          scrollViewContentOffset:(CGPoint)scrollViewContentOffset
-           scrollViewContentInset:(UIEdgeInsets)scrollViewContentInset
-            scrollViewContentSize:(CGSize)scrollViewContentSize
-                  scrollViewFrame:(CGRect)scrollViewFrame
-              scrollViewZoomScale:(CGFloat)scrollViewZoomScale
-                         userData:(NSDictionary *)userData
-                    coalescingKey:(uint16_t)coalescingKey NS_DESIGNATED_INITIALIZER;
-
-@end
-
-@implementation RCTScrollEvent
-{
-  CGPoint _scrollViewContentOffset;
-  UIEdgeInsets _scrollViewContentInset;
-  CGSize _scrollViewContentSize;
-  CGRect _scrollViewFrame;
-  CGFloat _scrollViewZoomScale;
-  NSDictionary *_userData;
-  uint16_t _coalescingKey;
-}
-
-@synthesize viewTag = _viewTag;
-@synthesize eventName = _eventName;
-
-- (instancetype)initWithEventName:(NSString *)eventName
-                         reactTag:(NSNumber *)reactTag
-          scrollViewContentOffset:(CGPoint)scrollViewContentOffset
-           scrollViewContentInset:(UIEdgeInsets)scrollViewContentInset
-            scrollViewContentSize:(CGSize)scrollViewContentSize
-                  scrollViewFrame:(CGRect)scrollViewFrame
-              scrollViewZoomScale:(CGFloat)scrollViewZoomScale
-                         userData:(NSDictionary *)userData
-                    coalescingKey:(uint16_t)coalescingKey
-{
-  RCTAssertParam(reactTag);
-
-  if ((self = [super init])) {
-    _eventName = [eventName copy];
-    _viewTag = reactTag;
-    _scrollViewContentOffset = scrollViewContentOffset;
-    _scrollViewContentInset = scrollViewContentInset;
-    _scrollViewContentSize = scrollViewContentSize;
-    _scrollViewFrame = scrollViewFrame;
-    _scrollViewZoomScale = scrollViewZoomScale;
-    _userData = userData;
-    _coalescingKey = coalescingKey;
-  }
-  return self;
-}
-
-RCT_NOT_IMPLEMENTED(- (instancetype)init)
-
-- (uint16_t)coalescingKey
-{
-  return _coalescingKey;
-}
-
-- (NSDictionary *)body
-{
-  NSDictionary *body = @{
-    @"contentOffset": @{
-      @"x": @(_scrollViewContentOffset.x),
-      @"y": @(_scrollViewContentOffset.y)
-    },
-    @"contentInset": @{
-      @"top": @(_scrollViewContentInset.top),
-      @"left": @(_scrollViewContentInset.left),
-      @"bottom": @(_scrollViewContentInset.bottom),
-      @"right": @(_scrollViewContentInset.right)
-    },
-    @"contentSize": @{
-      @"width": @(_scrollViewContentSize.width),
-      @"height": @(_scrollViewContentSize.height)
-    },
-    @"layoutMeasurement": @{
-      @"width": @(_scrollViewFrame.size.width),
-      @"height": @(_scrollViewFrame.size.height)
-    },
-    @"zoomScale": @(_scrollViewZoomScale ?: 1),
-  };
-
-  if (_userData) {
-    NSMutableDictionary *mutableBody = [body mutableCopy];
-    [mutableBody addEntriesFromDictionary:_userData];
-    body = mutableBody;
-  }
-
-  return body;
-}
-
-- (BOOL)canCoalesce
-{
-  return YES;
-}
-
-- (RCTScrollEvent *)coalesceWithEvent:(RCTScrollEvent *)newEvent
-{
-  NSArray<NSDictionary *> *updatedChildFrames = [_userData[@"updatedChildFrames"] arrayByAddingObjectsFromArray:newEvent->_userData[@"updatedChildFrames"]];
-  if (updatedChildFrames) {
-    NSMutableDictionary *userData = [newEvent->_userData mutableCopy];
-    userData[@"updatedChildFrames"] = updatedChildFrames;
-    newEvent->_userData = userData;
-  }
-
-  return newEvent;
-}
-
-+ (NSString *)moduleDotMethod
-{
-  return @"RCTEventEmitter.receiveEvent";
-}
-
-- (NSArray *)arguments
-{
-  return @[self.viewTag, RCTNormalizeInputEventName(self.eventName), [self body]];
-}
-
-@end
 
 /**
  * Include a custom scroll view subclass because we want to limit certain
@@ -161,7 +38,6 @@ RCT_NOT_IMPLEMENTED(- (instancetype)init)
 
 @end
 
-
 @implementation RCTCustomScrollView
 
 - (instancetype)initWithFrame:(CGRect)frame
@@ -170,7 +46,7 @@ RCT_NOT_IMPLEMENTED(- (instancetype)init)
     [self.panGestureRecognizer addTarget:self action:@selector(handleCustomPan:)];
 
     if ([self respondsToSelector:@selector(setSemanticContentAttribute:)]) {
-      // We intentionaly force `UIScrollView`s `semanticContentAttribute` to `LTR` here
+      // We intentionally force `UIScrollView`s `semanticContentAttribute` to `LTR` here
       // because this attribute affects a position of vertical scrollbar; we don't want this
       // scrollbar flip because we also flip it with whole `UIScrollView` flip.
       self.semanticContentAttribute = UISemanticContentAttributeForceLeftToRight;
@@ -298,7 +174,7 @@ RCT_NOT_IMPLEMENTED(- (instancetype)init)
 - (void)setContentOffset:(CGPoint)contentOffset
 {
   UIView *contentView = [self contentView];
-  if (contentView && _centerContent) {
+  if (contentView && _centerContent && !CGSizeEqualToSize(contentView.frame.size, CGSizeZero)) {
     CGSize subviewSize = contentView.frame.size;
     CGSize scrollViewSize = self.bounds.size;
     if (subviewSize.width <= scrollViewSize.width) {
@@ -367,7 +243,7 @@ RCT_NOT_IMPLEMENTED(- (instancetype)init)
 {
   [super didMoveToWindow];
   // ScrollView enables pinch gesture late in its lifecycle. So simply setting it
-  // in the setter gets overriden when the view loads.
+  // in the setter gets overridden when the view loads.
   self.pinchGestureRecognizer.enabled = _pinchGestureEnabled;
 }
 #endif //TARGET_OS_TV
@@ -476,7 +352,7 @@ static inline void RCTApplyTransformationAccordingLayoutDirection(UIView *view, 
   } else
 #endif
   {
-    RCTAssert(_contentView == nil, @"RCTScrollView may only contain a single subview");
+    RCTAssert(_contentView == nil, @"RCTScrollView may only contain a single subview, the already set subview looks like: %@", [_contentView react_recursiveDescription]);
     _contentView = view;
     RCTApplyTransformationAccordingLayoutDirection(_contentView, self.reactLayoutDirection);
     [_scrollView addSubview:view];
@@ -615,7 +491,7 @@ static inline void RCTApplyTransformationAccordingLayoutDirection(UIView *view, 
                                 fmax(_scrollView.contentSize.height - _scrollView.bounds.size.height + _scrollView.contentInset.bottom + fmax(_scrollView.contentInset.top, 0), 0.01)); // Make width and height greater than 0
     // Ensure at least one scroll event will fire
     _allowNextScrollNoMatterWhat = YES;
-    if (!CGRectContainsPoint(maxRect, offset)) {
+    if (!CGRectContainsPoint(maxRect, offset) && !self.scrollToOverflowEnabled) {
       CGFloat x = fmax(offset.x, CGRectGetMinX(maxRect));
       x = fmin(x, CGRectGetMaxX(maxRect));
       CGFloat y = fmax(offset.y, CGRectGetMinY(maxRect));
@@ -697,16 +573,19 @@ RCT_SCROLL_EVENT_HANDLER(scrollViewDidScrollToTop, onScrollToTop)
 
 - (void)scrollViewDidScroll:(UIScrollView *)scrollView
 {
-  [self updateClippedSubviews];
   NSTimeInterval now = CACurrentMediaTime();
+  [self updateClippedSubviews];
   /**
    * TODO: this logic looks wrong, and it may be because it is. Currently, if _scrollEventThrottle
    * is set to zero (the default), the "didScroll" event is only sent once per scroll, instead of repeatedly
    * while scrolling as expected. However, if you "fix" that bug, ScrollView will generate repeated
    * warnings, and behave strangely (ListView works fine however), so don't fix it unless you fix that too!
+   *
+   * We limit the delta to 17ms so that small throttles intended to enable 60fps updates will not
+   * inadvertently filter out any scroll events.
    */
   if (_allowNextScrollNoMatterWhat ||
-      (_scrollEventThrottle > 0 && _scrollEventThrottle < (now - _lastScrollDispatchTime))) {
+      (_scrollEventThrottle > 0 && _scrollEventThrottle < MAX(0.017, now - _lastScrollDispatchTime))) {
 
     if (_DEPRECATED_sendUpdatedChildFrames) {
       // Calculate changed frames
@@ -855,7 +734,11 @@ RCT_SCROLL_EVENT_HANDLER(scrollViewDidScrollToTop, onScrollToTop)
 
     // What is the current offset?
     CGFloat velocityAlongAxis = isHorizontal ? velocity.x : velocity.y;
-    CGFloat targetContentOffsetAlongAxis = isHorizontal ? targetContentOffset->x : targetContentOffset->y;
+    CGFloat targetContentOffsetAlongAxis = targetContentOffset->y;
+    if (isHorizontal) {
+      // Use current scroll offset to determine the next index to snap to when momentum disabled
+      targetContentOffsetAlongAxis = self.disableIntervalMomentum ? scrollView.contentOffset.x : targetContentOffset->x;
+    }
 
     // Offset based on desired alignment
     CGFloat frameLength = isHorizontal ? self.frame.size.width : self.frame.size.height;
@@ -868,6 +751,7 @@ RCT_SCROLL_EVENT_HANDLER(scrollViewDidScrollToTop, onScrollToTop)
 
     // Pick snap point based on direction and proximity
     CGFloat fractionalIndex = (targetContentOffsetAlongAxis + alignmentOffset) / snapToIntervalF;
+
     NSInteger snapIndex =
       velocityAlongAxis > 0.0 ?
         ceil(fractionalIndex) :

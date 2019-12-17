@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
  * This source code is licensed under the MIT license found in the
@@ -36,6 +36,7 @@ NS_ASSUME_NONNULL_BEGIN
 @interface RCTBridge (RCTSurfacePresenterStub)
 
 - (id<RCTSurfacePresenterStub>)surfacePresenter;
+- (void)setSurfacePresenter:(id<RCTSurfacePresenterStub>)presenter;
 
 @end
 

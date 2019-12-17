@@ -10,7 +10,7 @@
 
 'use strict';
 
-require('InitializeCore');
+require('react-native/Libraries/Core/InitializeCore');
 const React = require('react');
 const ReactNative = require('react-native');
 const {
@@ -33,10 +33,10 @@ const TESTS = [
   require('./ImageCachePolicyTest'),
   require('./ImageSnapshotTest'),
   require('./PromiseTest'),
-  require('./WebViewTest'),
   require('./SyncMethodTest'),
   require('./WebSocketTest'),
   require('./AccessibilityManagerTest'),
+  require('./GlobalEvalWithSourceUrlTest'),
 ];
 
 TESTS.forEach(
@@ -47,11 +47,11 @@ TESTS.forEach(
 );
 
 // Modules required for integration tests
-require('LoggingTestModule');
+require('./LoggingTestModule');
 
 type Test = any;
 
-class IntegrationTestsApp extends React.Component<{}, $FlowFixMeState> {
+class IntegrationTestsApp extends React.Component<{...}, $FlowFixMeState> {
   state = {
     test: (null: ?Test),
   };

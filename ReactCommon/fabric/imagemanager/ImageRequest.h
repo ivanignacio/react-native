@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
  * This source code is licensed under the MIT license found in the
@@ -63,7 +63,7 @@ class ImageRequest final {
 
  private:
   /*
-   * Image source assosiated with the request.
+   * Image source associated with the request.
    */
   ImageSource imageSource_;
 

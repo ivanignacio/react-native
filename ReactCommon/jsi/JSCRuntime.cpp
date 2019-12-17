@@ -1,7 +1,9 @@
-//  Copyright (c) Facebook, Inc. and its affiliates.
-//
-// This source code is licensed under the MIT license found in the
- // LICENSE file in the root directory of this source tree.
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
 
 #include "JSCRuntime.h"
 
@@ -214,11 +216,11 @@ class JSCRuntime : public jsi::Runtime {
   static JSStringRef stringRef(const jsi::String& str);
   static JSStringRef stringRef(const jsi::PropNameID& sym);
   static JSObjectRef objectRef(const jsi::Object& obj);
-    
+
 #ifdef RN_FABRIC_ENABLED
   static JSObjectRef objectRef(const jsi::WeakObject& obj);
 #endif
-    
+
   // Factory methods for creating String/Object
   jsi::Symbol createSymbol(JSValueRef symbolRef) const;
   jsi::String createString(JSStringRef stringRef) const;
@@ -630,7 +632,9 @@ jsi::String JSCRuntime::createStringFromUtf8(
     size_t length) {
   std::string tmp(reinterpret_cast<const char*>(str), length);
   JSStringRef stringRef = JSStringCreateWithUTF8CString(tmp.c_str());
-  return createString(stringRef);
+  auto result = createString(stringRef);
+  JSStringRelease(stringRef);
+  return result;
 }
 
 std::string JSCRuntime::utf8(const jsi::String& str) {
@@ -664,11 +668,11 @@ jsi::Object JSCRuntime::createObject(std::shared_ptr<jsi::HostObject> ho) {
     static JSValueRef getProperty(
         JSContextRef ctx,
         JSObjectRef object,
-        JSStringRef propertyName,
+        JSStringRef propName,
         JSValueRef* exception) {
       auto proxy = static_cast<HostObjectProxy*>(JSObjectGetPrivate(object));
       auto& rt = proxy->runtime;
-      jsi::PropNameID sym = rt.createPropNameID(propertyName);
+      jsi::PropNameID sym = rt.createPropNameID(propName);
       jsi::Value ret;
       try {
         ret = proxy->hostObject->get(rt, sym);
@@ -681,14 +685,20 @@ jsi::Object JSCRuntime::createObject(std::shared_ptr<jsi::HostObject> ho) {
                 .getPropertyAsFunction(rt, "Error")
                 .call(
                     rt,
-                    std::string("Exception in HostObject::get: ") + ex.what());
+                    std::string("Exception in HostObject::get(propName:")
+                      + JSStringToSTLString(propName)
+                      + std::string("): ") + ex.what());
         *exception = rt.valueRef(excValue);
         return JSValueMakeUndefined(ctx);
       } catch (...) {
         auto excValue =
             rt.global()
                 .getPropertyAsFunction(rt, "Error")
-                .call(rt, "Exception in HostObject::get: <unknown>");
+                .call(
+                    rt,
+                    std::string("Exception in HostObject::get(propName:")
+                      + JSStringToSTLString(propName)
+                      + std::string("): <unknown>"));
         *exception = rt.valueRef(excValue);
         return JSValueMakeUndefined(ctx);
       }
@@ -718,14 +728,20 @@ jsi::Object JSCRuntime::createObject(std::shared_ptr<jsi::HostObject> ho) {
                 .getPropertyAsFunction(rt, "Error")
                 .call(
                     rt,
-                    std::string("Exception in HostObject::set: ") + ex.what());
+                    std::string("Exception in HostObject::set(propName:")
+                      + JSStringToSTLString(propName)
+                      + std::string("): ") + ex.what());
         *exception = rt.valueRef(excValue);
         return false;
       } catch (...) {
         auto excValue =
             rt.global()
                 .getPropertyAsFunction(rt, "Error")
-                .call(rt, "Exception in HostObject::set: <unknown>");
+                .call(
+                    rt,
+                      std::string("Exception in HostObject::set(propName:")
+                      + JSStringToSTLString(propName)
+                      + std::string("): <unknown>"));
         *exception = rt.valueRef(excValue);
         return false;
       }
@@ -777,7 +793,7 @@ jsi::Object JSCRuntime::createObject(std::shared_ptr<jsi::HostObject> ho) {
 
 std::shared_ptr<jsi::HostObject> JSCRuntime::getHostObject(
     const jsi::Object& obj) {
-  // We are guarenteed at this point to have isHostObject(obj) == true
+  // We are guaranteed at this point to have isHostObject(obj) == true
   // so the private data should be HostObjectMetadata
   JSObjectRef object = objectRef(obj);
   auto metadata =
@@ -1359,14 +1375,14 @@ JSStringRef JSCRuntime::stringRef(const jsi::PropNameID& sym) {
 JSObjectRef JSCRuntime::objectRef(const jsi::Object& obj) {
   return static_cast<const JSCObjectValue*>(getPointerValue(obj))->obj_;
 }
-      
+
 #ifdef RN_FABRIC_ENABLED
 JSObjectRef JSCRuntime::objectRef(const jsi::WeakObject& obj) {
   // TODO: revisit this implementation
   return static_cast<const JSCObjectValue*>(getPointerValue(obj))->obj_;
 }
 #endif
-      
+
 void JSCRuntime::checkException(JSValueRef exc) {
   if (JSC_UNLIKELY(exc)) {
     throw jsi::JSError(*this, createValue(exc));

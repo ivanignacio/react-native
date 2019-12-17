@@ -1,13 +1,12 @@
-/**
+/*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  */
 
-#import "RCTBaseTextInputView.h"
+#import <React/RCTBaseTextInputView.h>
 
-#import <React/RCTAccessibilityManager.h>
 #import <React/RCTBridge.h>
 #import <React/RCTConvert.h>
 #import <React/RCTEventDispatcher.h>
@@ -15,10 +14,10 @@
 #import <React/RCTUtils.h>
 #import <React/UIView+React.h>
 
-#import "RCTInputAccessoryView.h"
-#import "RCTInputAccessoryViewContent.h"
-#import "RCTTextAttributes.h"
-#import "RCTTextSelection.h"
+#import <React/RCTInputAccessoryView.h>
+#import <React/RCTInputAccessoryViewContent.h>
+#import <React/RCTTextAttributes.h>
+#import <React/RCTTextSelection.h>
 
 @implementation RCTBaseTextInputView {
   __weak RCTBridge *_bridge;
@@ -68,7 +67,7 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithFrame:(CGRect)frame)
 - (void)enforceTextAttributesIfNeeded
 {
   id<RCTBackedTextInputViewProtocol> backedTextInputView = self.backedTextInputView;
-  backedTextInputView.reactTextAttributes = _textAttributes;
+  backedTextInputView.defaultTextAttributes = [_textAttributes effectiveTextAttributes];
 }
 
 - (void)setReactPaddingInsets:(UIEdgeInsets)reactPaddingInsets
@@ -93,13 +92,13 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithFrame:(CGRect)frame)
 }
 
 - (BOOL)textOf:(NSAttributedString*)newText equals:(NSAttributedString*)oldText{
-  // When the dictation is running we can't update the attibuted text on the backed up text view
+  // When the dictation is running we can't update the attributed text on the backed up text view
   // because setting the attributed string will kill the dictation. This means that we can't impose
   // the settings on a dictation.
   // Similarly, when the user is in the middle of inputting some text in Japanese/Chinese, there will be styling on the
   // text that we should disregard. See https://developer.apple.com/documentation/uikit/uitextinput/1614489-markedtextrange?language=objc
   // for more info.
-  // If the user added an emoji, the sytem adds a font attribute for the emoji and stores the original font in NSOriginalFont.
+  // If the user added an emoji, the system adds a font attribute for the emoji and stores the original font in NSOriginalFont.
   // Lastly, when entering a password, etc., there will be additional styling on the field as the native text view
   // handles showing the last character for a split second.
   __block BOOL fontHasBeenUpdatedBySystem = false;
@@ -160,7 +159,7 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithFrame:(CGRect)frame)
 
     [self updateLocalData];
   } else if (eventLag > RCTTextUpdateLagWarningThreshold) {
-    RCTLogWarn(@"Native TextInput(%@) is %lld events ahead of JS - try to make your JS faster.", self.backedTextInputView.attributedText.string, (long long)eventLag);
+    RCTLog(@"Native TextInput(%@) is %lld events ahead of JS - try to make your JS faster.", self.backedTextInputView.attributedText.string, (long long)eventLag);
   }
 }
 
@@ -189,7 +188,7 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithFrame:(CGRect)frame)
   if (eventLag == 0 && ![previousSelectedTextRange isEqual:selectedTextRange]) {
     [backedTextInputView setSelectedTextRange:selectedTextRange notifyDelegate:NO];
   } else if (eventLag > RCTTextUpdateLagWarningThreshold) {
-    RCTLogWarn(@"Native TextInput(%@) is %lld events ahead of JS - try to make your JS faster.", backedTextInputView.attributedText.string, (long long)eventLag);
+    RCTLog(@"Native TextInput(%@) is %lld events ahead of JS - try to make your JS faster.", backedTextInputView.attributedText.string, (long long)eventLag);
   }
 }
 
@@ -260,6 +259,16 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithFrame:(CGRect)frame)
   #endif
 }
 
+
+- (void)setPasswordRules:(NSString *)descriptor
+{
+  #if defined(__IPHONE_OS_VERSION_MAX_ALLOWED) && __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_12_0
+    if (@available(iOS 12.0, *)) {
+      self.backedTextInputView.passwordRules = [UITextInputPasswordRules passwordRulesWithDescriptor:descriptor];
+    }
+  #endif
+}
+
 - (UIKeyboardType)keyboardType
 {
   return self.backedTextInputView.keyboardType;
@@ -275,24 +284,6 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithFrame:(CGRect)frame)
       [textInputView reloadInputViews];
     }
   }
-}
-
-- (BOOL)secureTextEntry {
-  return self.backedTextInputView.secureTextEntry;
-}
-
-- (void)setSecureTextEntry:(BOOL)secureTextEntry {
-  UIView<RCTBackedTextInputViewProtocol> *textInputView = self.backedTextInputView;
-    
-  if (textInputView.secureTextEntry != secureTextEntry) {
-    textInputView.secureTextEntry = secureTextEntry;
-      
-    // Fix #5859, see https://stackoverflow.com/questions/14220187/uitextfield-has-trailing-whitespace-after-securetextentry-toggle/22537788#22537788
-    NSAttributedString *originalText = [textInputView.attributedText copy];
-    self.backedTextInputView.attributedText = [NSAttributedString new];
-    self.backedTextInputView.attributedText = originalText;
-  }
-    
 }
 
 #pragma mark - RCTBackedTextInputDelegate
@@ -360,7 +351,7 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithFrame:(CGRect)frame)
   // Does nothing.
 }
 
-- (BOOL)textInputShouldChangeTextInRange:(NSRange)range replacementText:(NSString *)text
+- (NSString *)textInputShouldChangeText:(NSString *)text inRange:(NSRange)range
 {
   id<RCTBackedTextInputViewProtocol> backedTextInputView = self.backedTextInputView;
 
@@ -381,7 +372,12 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithFrame:(CGRect)frame)
         // Truncate the input string so the result is exactly maxLength
         NSString *limitedString = [text substringToIndex:allowedLength];
         NSMutableAttributedString *newAttributedText = [backedTextInputView.attributedText mutableCopy];
-        [newAttributedText replaceCharactersInRange:range withString:limitedString];
+        // Apply text attributes if original input view doesn't have text.
+        if (backedTextInputView.attributedText.length == 0) {
+          newAttributedText = [[NSMutableAttributedString alloc] initWithString:[self.textAttributes applyTextAttributesToText:limitedString] attributes:self.textAttributes.effectiveTextAttributes];
+        } else {
+          [newAttributedText replaceCharactersInRange:range withString:limitedString];
+        }
         backedTextInputView.attributedText = newAttributedText;
         _predictedText = newAttributedText.string;
 
@@ -394,12 +390,12 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithFrame:(CGRect)frame)
         [self textInputDidChange];
       }
 
-      return NO;
+      return nil; // Rejecting the change.
     }
   }
 
   NSString *previousText = backedTextInputView.attributedText.string ?: @"";
-  
+
   if (range.location + range.length > backedTextInputView.attributedText.string.length) {
     _predictedText = backedTextInputView.attributedText.string;
   } else {
@@ -418,7 +414,7 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithFrame:(CGRect)frame)
     });
   }
 
-  return YES;
+  return text; // Accepting the change.
 }
 
 - (void)textInputDidChange
@@ -435,7 +431,7 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithFrame:(CGRect)frame)
   NSRange predictionRange;
   if (findMismatch(backedTextInputView.attributedText.string, _predictedText, &currentRange, &predictionRange)) {
     NSString *replacement = [backedTextInputView.attributedText.string substringWithRange:currentRange];
-    [self textInputShouldChangeTextInRange:predictionRange replacementText:replacement];
+    [self textInputShouldChangeText:replacement inRange:predictionRange];
     // JS will assume the selection changed based on the location of our shouldChangeTextInRange, so reset it.
     [self textInputDidChangeSelection];
   }

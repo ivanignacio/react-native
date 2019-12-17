@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
  * This source code is licensed under the MIT license found in the
@@ -32,6 +32,7 @@ static RCTFontWeight weightOfFont(UIFont *font)
       @"semibold",
       @"demibold",
       @"extrabold",
+      @"ultrabold",
       @"bold",
       @"heavy",
       @"black"
@@ -45,6 +46,7 @@ static RCTFontWeight weightOfFont(UIFont *font)
       @(UIFontWeightMedium),
       @(UIFontWeightSemibold),
       @(UIFontWeightSemibold),
+      @(UIFontWeightHeavy),
       @(UIFontWeightHeavy),
       @(UIFontWeightBold),
       @(UIFontWeightHeavy),

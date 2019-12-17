@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
  * This source code is licensed under the MIT license found in the
@@ -46,7 +46,7 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, assign) BOOL secureTextEntry;
 @property (nonatomic, copy) RCTTextSelection *selection;
 @property (nonatomic, strong, nullable) NSNumber *maxLength;
-@property (nonatomic, copy) NSAttributedString *attributedText;
+@property (nonatomic, copy, nullable) NSAttributedString *attributedText;
 @property (nonatomic, copy) NSString *inputAccessoryViewID;
 @property (nonatomic, assign) UIKeyboardType keyboardType;
 

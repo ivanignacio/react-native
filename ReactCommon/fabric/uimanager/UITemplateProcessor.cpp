@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
  * This source code is licensed under the MIT license found in the
@@ -52,9 +52,9 @@ SharedShadowNode UITemplateProcessor::runCommand(
         tag + tagOffset, type, rootTag, props, nullptr);
     if (parentTag > -1) { // parentTag == -1 indicates root node
       auto parentShadowNode = nodes[parentTag];
-      const SharedComponentDescriptor &componentDescriptor =
-          componentDescriptorRegistry[parentShadowNode];
-      componentDescriptor->appendChild(parentShadowNode, nodes[tag]);
+      auto const &componentDescriptor = componentDescriptorRegistry.at(
+          parentShadowNode->getComponentHandle());
+      componentDescriptor.appendChild(parentShadowNode, nodes[tag]);
     }
   } else if (opcode == "returnRoot") {
     if (DEBUG_FLY) {

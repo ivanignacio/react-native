@@ -15,7 +15,7 @@ const ReactNative = require('react-native');
 const {AsyncStorage, Text, View, StyleSheet} = ReactNative;
 const {TestModule} = ReactNative.NativeModules;
 
-const deepDiffer = require('deepDiffer');
+const deepDiffer = require('react-native/Libraries/Utilities/differ/deepDiffer');
 
 const DEBUG = false;
 
@@ -171,8 +171,8 @@ function testOptimizedMultiGet() {
   });
 }
 
-class AsyncStorageTest extends React.Component<{}, $FlowFixMeState> {
-  state = {
+class AsyncStorageTest extends React.Component<{...}, $FlowFixMeState> {
+  state: any | {|done: boolean, messages: string|} = {
     messages: 'Initializing...',
     done: false,
   };
@@ -189,7 +189,7 @@ class AsyncStorageTest extends React.Component<{}, $FlowFixMeState> {
     AsyncStorage.clear(testSetAndGet);
   }
 
-  render() {
+  render(): React.Node {
     return (
       <View style={styles.container}>
         <Text>

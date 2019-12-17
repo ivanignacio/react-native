@@ -25,7 +25,7 @@ jni_instrumentation_test_lib(
     ],
     soname = "libxplat-bridge.so",
     visibility = [
-        "fbandroid//instrumentation_tests/...",
+        "//fbandroid/instrumentation_tests/...",
     ],
     deps = [
         "fbsource//xplat/folly:dynamic",
@@ -52,6 +52,20 @@ fb_xplat_cxx_test(
         "fbsource//xplat/folly:molly",
         "fbsource//xplat/third-party/gmock:gtest",
         react_native_xplat_target("cxxreact:bridge"),
+        react_native_xplat_target("cxxreact:jsbigstring"),
+    ],
+)
+
+fb_xplat_cxx_test(
+    name = "jsbigstring_test",
+    srcs = ["jsbigstring.cpp"],
+    compiler_flags = [
+        "-fexceptions",
+        "-frtti",
+    ],
+    deps = [
+        "fbsource//xplat/folly:molly",
+        "fbsource//xplat/third-party/gmock:gtest",
         react_native_xplat_target("cxxreact:jsbigstring"),
     ],
 )

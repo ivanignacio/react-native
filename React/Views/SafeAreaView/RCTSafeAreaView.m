@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
  * This source code is licensed under the MIT license found in the
@@ -118,6 +118,10 @@ static BOOL UIEdgeInsetsEqualToEdgeInsetsWithThreshold(UIEdgeInsets insets1, UIE
   }
 
   _emulateUnlessSupported = emulateUnlessSupported;
+  
+  if ([self isSupportedByOS]) {
+    return;
+  }
 
   [self invalidateSafeAreaInsets];
 }

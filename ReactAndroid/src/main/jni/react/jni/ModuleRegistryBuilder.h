@@ -1,7 +1,9 @@
-// Copyright (c) Facebook, Inc. and its affiliates.
-
-// This source code is licensed under the MIT license found in the
-// LICENSE file in the root directory of this source tree.
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
 
 #include <string>
 
@@ -23,7 +25,7 @@ class ModuleHolder : public jni::JavaClass<ModuleHolder> {
     "Lcom/facebook/react/bridge/ModuleHolder;";
 
   std::string getName() const;
-  xplat::module::CxxModule::Provider getProvider() const;
+  xplat::module::CxxModule::Provider getProvider(const std::string& moduleName) const;
 };
 
 std::vector<std::unique_ptr<NativeModule>> buildNativeModuleList(

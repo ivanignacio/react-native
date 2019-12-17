@@ -1,7 +1,9 @@
-// Copyright (c) Facebook, Inc. and its affiliates.
-
-// This source code is licensed under the MIT license found in the
-// LICENSE file in the root directory of this source tree.
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
 
 #include "Transform.h"
 
@@ -145,6 +147,32 @@ Transform Transform::operator*(Transform const &rhs) const {
   result.matrix[13] = rhs0 * lhs01 + rhs1 * lhs11 + rhs2 * lhs21 + rhs3 * lhs31;
   result.matrix[14] = rhs0 * lhs02 + rhs1 * lhs12 + rhs2 * lhs22 + rhs3 * lhs32;
   result.matrix[15] = rhs0 * lhs03 + rhs1 * lhs13 + rhs2 * lhs23 + rhs3 * lhs33;
+
+  return result;
+}
+
+Float &Transform::at(int i, int j) {
+  return matrix[(i * 4) + j];
+}
+
+Float const &Transform::at(int i, int j) const {
+  return matrix[(i * 4) + j];
+}
+
+Point operator*(Point const &point, Transform const &transform) {
+  if (transform == Transform::Identity()) {
+    return point;
+  }
+
+  auto result = Point{};
+  result.x = transform.at(3, 0) + point.x * transform.at(0, 0) + point.y * transform.at(1, 0);
+  result.y = transform.at(3, 1) + point.x * transform.at(0, 1) + point.y * transform.at(1, 1);
+  auto w = transform.at(3, 3) + point.x * transform.at(0, 3) + point.y * transform.at(1, 3);
+
+  if (w != 1 && w != 0) {
+    result.x /= w;
+    result.y /= w;
+  }
 
   return result;
 }

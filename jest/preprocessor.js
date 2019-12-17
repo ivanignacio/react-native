@@ -12,9 +12,10 @@
 
 'use strict';
 
-const {transformSync: babelTransformSync} = require('@babel/core');
 const babelRegisterOnly = require('metro-babel-register');
 const createCacheKeyFunction = require('fbjs-scripts/jest/createCacheKeyFunction');
+
+const {transformSync: babelTransformSync} = require('@babel/core');
 const generate = require('@babel/generator').default;
 
 const nodeFiles = new RegExp(
@@ -28,7 +29,7 @@ babelRegisterOnly([]);
 
 const transformer = require('metro-react-native-babel-transformer');
 module.exports = {
-  process(src /*: string */, file /*: string */) {
+  process(src /*: string */, file /*: string */) /*: string */ {
     if (nodeFiles.test(file)) {
       // node specific transforms only
       return babelTransformSync(src, {
@@ -39,6 +40,8 @@ module.exports = {
       }).code;
     }
 
+    /* $FlowFixMe(>=0.99.0 site=react_native_fb) This fixme can be removed after metro releases
+     * 0.58 and RN upgrades its dependency */
     const {ast} = transformer.transform({
       filename: file,
       options: {
@@ -111,9 +114,9 @@ module.exports = {
     ).code;
   },
 
-  getCacheKey: createCacheKeyFunction([
+  getCacheKey: (createCacheKeyFunction([
     __filename,
     require.resolve('metro-react-native-babel-transformer'),
     require.resolve('@babel/core/package.json'),
-  ]),
+  ]) /*: any */),
 };

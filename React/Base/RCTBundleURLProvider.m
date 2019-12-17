@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
  * This source code is licensed under the MIT license found in the
@@ -15,7 +15,9 @@ NSString *const RCTBundleURLProviderUpdatedNotification = @"RCTBundleURLProvider
 const NSUInteger kRCTBundleURLProviderDefaultPort = RCT_METRO_PORT;
 
 static NSString *const kRCTJsLocationKey = @"RCT_jsLocation";
-static NSString *const kRCTEnableLiveReloadKey = @"RCT_enableLiveReload";
+// This option is no longer exposed in the dev menu UI.
+// It was renamed in D15958697 so it doesn't get stuck with no way to turn it off:
+static NSString *const kRCTEnableLiveReloadKey = @"RCT_enableLiveReload_LEGACY";
 static NSString *const kRCTEnableDevKey = @"RCT_enableDev";
 static NSString *const kRCTEnableMinificationKey = @"RCT_enableMinification";
 
@@ -74,12 +76,12 @@ static NSURL *serverRootWithHostPort(NSString *hostPort)
 - (BOOL)isPackagerRunning:(NSString *)host
 {
   NSURL *url = [serverRootWithHostPort(host) URLByAppendingPathComponent:@"status"];
-  
+
   NSURLSession *session = [NSURLSession sharedSession];
   NSURLRequest *request = [NSURLRequest requestWithURL:url];
   __block NSURLResponse *response;
   __block NSData *data;
-  
+
   dispatch_semaphore_t semaphore = dispatch_semaphore_create(0);
   [[session dataTaskWithRequest:request
             completionHandler:^(NSData *d,
@@ -90,7 +92,7 @@ static NSURL *serverRootWithHostPort(NSString *hostPort)
               dispatch_semaphore_signal(semaphore);
             }] resume];
   dispatch_semaphore_wait(semaphore, DISPATCH_TIME_FOREVER);
-  
+
   NSString *status = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
   return [status isEqualToString:@"packager-status:running"];
 }
@@ -128,17 +130,25 @@ static NSURL *serverRootWithHostPort(NSString *hostPort)
   return nil;
 }
 
-- (NSURL *)jsBundleURLForBundleRoot:(NSString *)bundleRoot fallbackResource:(NSString *)resourceName fallbackExtension:(NSString *)extension
+- (NSURL *)jsBundleURLForBundleRoot:(NSString *)bundleRoot fallbackURLProvider:(NSURL *(^)(void))fallbackURLProvider
 {
   NSString *packagerServerHost = [self packagerServerHost];
   if (!packagerServerHost) {
-    return [self jsBundleURLForFallbackResource:resourceName fallbackExtension:extension];
+    return fallbackURLProvider();
   } else {
     return [RCTBundleURLProvider jsBundleURLForBundleRoot:bundleRoot
                                              packagerHost:packagerServerHost
                                                 enableDev:[self enableDev]
                                        enableMinification:[self enableMinification]];
   }
+}
+
+- (NSURL *)jsBundleURLForBundleRoot:(NSString *)bundleRoot
+                   fallbackResource:(NSString *)resourceName fallbackExtension:(NSString *)extension
+{
+  return [self jsBundleURLForBundleRoot:bundleRoot fallbackURLProvider:^NSURL*{
+    return [self jsBundleURLForFallbackResource:resourceName fallbackExtension:extension];
+  }];
 }
 
 - (NSURL *)jsBundleURLForBundleRoot:(NSString *)bundleRoot fallbackResource:(NSString *)resourceName

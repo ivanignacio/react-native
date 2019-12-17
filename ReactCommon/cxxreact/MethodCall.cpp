@@ -1,7 +1,9 @@
-// Copyright (c) Facebook, Inc. and its affiliates.
-
-// This source code is licensed under the MIT license found in the
-// LICENSE file in the root directory of this source tree.
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
 
 #include "MethodCall.h"
 
@@ -69,7 +71,7 @@ std::vector<MethodCall> parseMethodCalls(folly::dynamic&& jsonData) {
       std::move(params[i]),
       callId);
 
-    // only incremement callid if contains valid callid as callid is optional
+    // only increment callid if contains valid callid as callid is optional
     callId += (callId != -1) ? 1 : 0;
   }
 

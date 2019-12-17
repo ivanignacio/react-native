@@ -1,22 +1,15 @@
-/**
+/*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * This source code is licensed under the MIT license found in the LICENSE
- * file in the root directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 package com.facebook.yoga;
 
 import javax.annotation.Nullable;
 
 public abstract class YogaNode {
-  public static YogaNode create() {
-    return new YogaNodeJNI();
-  }
-
-  public static YogaNode create(YogaConfig config) {
-    return new YogaNodeJNI(config);
-  }
-
   public abstract void reset();
 
   public abstract int getChildCount();
@@ -211,6 +204,8 @@ public abstract class YogaNode {
 
   public abstract boolean isMeasureDefined();
 
+  public abstract boolean isBaselineDefined();
+
   public abstract void setData(Object data);
 
   @Nullable
@@ -218,5 +213,5 @@ public abstract class YogaNode {
 
   public abstract void print();
 
-  public abstract void setStyleInputs(float[] styleInputs, int size);
+  public abstract YogaNode cloneWithoutChildren();
 }

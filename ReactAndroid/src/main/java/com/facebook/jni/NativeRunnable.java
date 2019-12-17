@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
  * This source code is licensed under the MIT license found in the
@@ -7,17 +7,15 @@
 
 package com.facebook.jni;
 
-import com.facebook.jni.HybridData;
 import com.facebook.proguard.annotations.DoNotStrip;
 
-/**
- * A Runnable that has a native run implementation.
- */
+/** A Runnable that has a native run implementation. */
 @DoNotStrip
 public class NativeRunnable implements Runnable {
 
-  private final HybridData mHybridData;
+  @DoNotStrip private final HybridData mHybridData;
 
+  @DoNotStrip
   private NativeRunnable(HybridData hybridData) {
     mHybridData = hybridData;
   }
